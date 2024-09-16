@@ -36,6 +36,8 @@ fn tokenize(input: impl AsRef<str>) {
         match char {
             '(' => println!("LEFT_PAREN ( null"),
             ')' => println!("RIGHT_PAREN ) null"),
+            '}' => println!("RIGHT_BRACE }} null"),
+            '{' => println!("LEFT_BRACE {{ null"),
             _ => {}
         }
     }
