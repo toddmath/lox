@@ -1,11 +1,12 @@
 use std::env;
 use std::fs;
-use std::io::{self, Write};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
+    let program_name = &args[0];
+
     if args.len() < 3 {
-        writeln!(io::stderr(), "Usage: {} tokenize <filename>", args[0]).unwrap();
+        eprintln!("Usage: {program_name} tokenize <filename>");
         return;
     }
 
@@ -14,23 +15,19 @@ fn main() {
 
     match command.as_str() {
         "tokenize" => {
-            // You can use print statements as follows for debugging, they'll be visible when running tests.
-            // writeln!(io::stderr(), "Logs from your program will appear here!").unwrap();
-
-            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
-                writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
-                String::new()
-            });
+            let file_contents = fs::read_to_string(filename)
+                .inspect_err(|_| eprintln!("Failed to read file {filename}"))
+                .unwrap_or_default();
 
             tokenize(file_contents);
         }
         _ => {
-            writeln!(io::stderr(), "Unknown command: {}", command).unwrap();
-            return;
+            eprintln!("Unknown command: {command}");
         }
     }
 }
 
+// (){};,+-*!===<=>=!=<>/.
 fn tokenize(input: impl AsRef<str>) {
     for char in input.as_ref().chars() {
         match char {
@@ -38,6 +35,15 @@ fn tokenize(input: impl AsRef<str>) {
             ')' => println!("RIGHT_PAREN ) null"),
             '}' => println!("RIGHT_BRACE }} null"),
             '{' => println!("LEFT_BRACE {{ null"),
+            ';' => println!("SEMICOLON ; null"),
+            ',' => println!("COMMA , null"),
+            '+' => println!("PLUS + null"),
+            '-' => println!("MINUS - null"),
+            '*' => println!("STAR * null"),
+            '<' => println!("LESS < null"),
+            '>' => println!("GREATER > null"),
+            '/' => println!("SLASH / null"),
+            '.' => println!("DOT . null"),
             _ => {}
         }
     }
