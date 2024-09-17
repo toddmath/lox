@@ -1,51 +1,60 @@
-use std::env;
-use std::fs;
+use clap::{Parser, Subcommand};
+use codecrafters_interpreter::*;
+use miette::{IntoDiagnostic, Result, WrapErr};
+use std::{fs, path::PathBuf};
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    let program_name = &args[0];
-
-    if args.len() < 3 {
-        eprintln!("Usage: {program_name} tokenize <filename>");
-        return;
-    }
-
-    let command = &args[1];
-    let filename = &args[2];
-
-    match command.as_str() {
-        "tokenize" => {
-            let file_contents = fs::read_to_string(filename)
-                .inspect_err(|_| eprintln!("Failed to read file {filename}"))
-                .unwrap_or_default();
-
-            tokenize(file_contents);
-        }
-        _ => {
-            eprintln!("Unknown command: {command}");
-        }
-    }
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[command(subcommand)]
+    command: Commands,
 }
 
-// (){};,+-*!===<=>=!=<>/.
-fn tokenize(input: impl AsRef<str>) {
-    for char in input.as_ref().chars() {
-        match char {
-            '(' => println!("LEFT_PAREN ( null"),
-            ')' => println!("RIGHT_PAREN ) null"),
-            '}' => println!("RIGHT_BRACE }} null"),
-            '{' => println!("LEFT_BRACE {{ null"),
-            ';' => println!("SEMICOLON ; null"),
-            ',' => println!("COMMA , null"),
-            '+' => println!("PLUS + null"),
-            '-' => println!("MINUS - null"),
-            '*' => println!("STAR * null"),
-            '<' => println!("LESS < null"),
-            '>' => println!("GREATER > null"),
-            '/' => println!("SLASH / null"),
-            '.' => println!("DOT . null"),
-            _ => {}
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Tokenize { filename: PathBuf },
+}
+
+fn main() -> Result<()> {
+    let args = Args::parse();
+    let mut any_cc_err = false;
+
+    match args.command {
+        Commands::Tokenize { filename } => {
+            let file_contents = fs::read_to_string(&filename)
+                .into_diagnostic()
+                .wrap_err_with(|| format!("reading '{}' failed", filename.display()))?;
+
+            if file_contents.chars().count() > 0 {
+                for token in Lexer::new(&file_contents) {
+                    let token = match token {
+                        Ok(t) => t,
+                        Err(e) => {
+                            eprintln!("{e:?}");
+                            if let Some(unrecognized) = e.downcast_ref::<SingleTokenError>() {
+                                any_cc_err = true;
+                                eprintln!(
+                                    "[line {}] Error: Unexpected character: {}",
+                                    unrecognized.line(),
+                                    unrecognized.token
+                                );
+                                // std::process::exit(65);
+                            }
+                            // return Err(e);
+                            continue;
+                        }
+                    };
+                    println!("{token}");
+                }
+            }
+
+            println!("EOF  null");
+
+            if any_cc_err {
+                std::process::exit(65);
+            }
         }
     }
-    println!("EOF  null");
+
+    Ok(())
 }
